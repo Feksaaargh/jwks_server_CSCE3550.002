@@ -4,15 +4,6 @@ from tokenmanager import TokenManager
 app = Flask(__name__)
 tkm = TokenManager()
 
-"""
-@app.route("/.well-known/jwks.json", methods=["POST"])
-def getStuff() -> tuple[str, int]:
-    if "kid" not in request.args: return "No kid value supplied", 400
-    jwks = tkm.getJWKS(request.args.get("kid"))
-    if jwks is None: return "No key with kid found", 404
-    return jwks, 200
-"""
-
 @app.route("/.well-known/<kid>", methods=["GET"])
 def getJWKS(kid) -> tuple[str, int]:
     """

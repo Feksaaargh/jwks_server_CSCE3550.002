@@ -64,7 +64,7 @@ class TokenManager:
             # since expired tokens are only cleaned upon attempted retrieval, this could get bloated...
             del self._tokens[kid]
             return None
-        return f'{{"kty":"RSA","kid":"{kid}","n":"{intToB64(key.n)}","e":"{intToB64(key.e)}"}}'
+        return f'{{"kty":"oct","alg":"HS256","kid":"{kid}","k":"{urlsafe_b64encode(self._signature).decode("utf-8")}"}}'
 
     def makeJWT(self, timeout: float) -> str:
         """
