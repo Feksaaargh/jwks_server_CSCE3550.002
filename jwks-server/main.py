@@ -7,8 +7,9 @@ tkm = TokenManager()
 @app.route("/.well-known/<kid>", methods=["GET"])
 def getJWKS(kid) -> tuple[str, int]:
     """
-    If kid is "jwks", returns all JWKs known to the system.
-    If kid is anything else, attempts to return that specific JWK (in a JWKS).
+    <kid> needs to end with ".json" for this function to respond to it.
+    If kid is "jwks.json", returns all JWKs known to the system.
+    If kid is anything else (+.json), attempts to return that specific JWK (in a JWKS).
     """
     # note that since the generated kids are RFC4122 UUIDs, it can never be "jwks"
     #  and therefore collisions aren't a problem

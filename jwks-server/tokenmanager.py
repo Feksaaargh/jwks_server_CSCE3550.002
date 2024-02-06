@@ -9,8 +9,8 @@ import jwt
 # I decided to do this rather than inherit so it pretends it's a simpler object which better suits my needs
 class ExpirableRSAKey:
     """
-    Effectively just a Crypto.PublickKey.RSA.RsaKey object, but instantiated with __init__ and has
-    a different constructor and an 'expired' parameter.
+    Effectively just a Crypto.PublickKey.RSA.RsaKey object, but has a different constructor
+    and an 'expired' parameter.
     """
     def __init__(self, expiration: float, length: int = 3072):
         """
@@ -34,7 +34,7 @@ class ExpirableRSAKey:
 class TokenManager:
     """
     A class to create, store, and retrieve JWTs and JWKs.
-    Note that tokens are stored in memory and are lost when the object is destroyed.
+    Note that keys are stored in memory and are lost when the object is destroyed.
     """
     def __init__(self):
         self._tokens: dict[str, ExpirableRSAKey] = {}
@@ -53,7 +53,7 @@ class TokenManager:
 
     def getJWK(self, kid: str) -> str | None:
         """
-        Retrieve a single JWK from the logged items.
+        Retrieve and formats a single JWK from the known items.
 
         :param kid: Identifier for the key being requested
         :return: a string encoding the requested JWK, or None if not found or expired.
@@ -69,10 +69,10 @@ class TokenManager:
 
     def makeJWT(self, timeout: float) -> str:
         """
-        Makes a signed JWT and returns it. It contains a parameter "kid" referring to the key it was signed with,
-        accessible from issuing a GET to /.well-known/<kid>.json
+        Makes a JWK and JWT, then signs the JWT and returns it. It contains a parameter "kid" referring
+        to the JWK it was signed with, accessible from issuing a GET to /.well-known/<kid>.json
 
-        :param timeout: Timeout in seconds after which this token will expire
+        :param timeout: Timeout in seconds after which the created JWK will expire
         :return: a signed JWT
         """
         # https://datatracker.ietf.org/doc/rfc7519/
