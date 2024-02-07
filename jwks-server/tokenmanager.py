@@ -4,7 +4,7 @@ from uuid import uuid4
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 from time import time
-import jwt
+from jose import jwt
 
 # I decided to do this rather than inherit so it pretends it's a simpler object which better suits my needs
 class ExpirableRSAKey:
@@ -19,7 +19,7 @@ class ExpirableRSAKey:
         """
         self._key: RSA.RsaKey = RSA.generate(length)
         self.expiration: float = expiration
-        self.private: bytes = self._key.export_key()  # for convenience
+        self.private: str = self._key.export_key().decode('utf-8')  # for convenience
 
     @property
     def expired(self) -> bool:
