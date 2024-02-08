@@ -1,5 +1,7 @@
 from flask import Flask, request, abort
 from tokenmanager import TokenManager
+import sys
+from os.path import basename
 
 app = Flask(__name__)
 tkm = TokenManager()
@@ -24,9 +26,26 @@ def getJWKS(kid) -> tuple[str, int]:
 
 @app.route("/auth", methods=["POST"])
 def createJWT() -> str:
+    """Create a JWK and return a corresponding JWT"""
     return tkm.makeJWT(-3600 if
                        request.args.get("expired") == "true"
                        else 3600)  # default key expiration is 1 hour
 
-if __name__ == "__main__":
+def main():
+    """Run the server"""
     app.run(port=8080)
+
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    # check for any invalid command line option (including help requests)
+    if any(i != '--test' for i in args):
+        print(f"Usage: {basename(__file__)} [OPTIONS...]")
+        print("  -h --help    Show this screen")
+        print("  --test       Run tests")
+        exit(0)
+    if "--test" in args:
+        raise NotImplementedError("Go to a more recent commit.")
+        exit(1)  # make absolutely sure it's dead
+    else:
+        main()
+        exit(0)
