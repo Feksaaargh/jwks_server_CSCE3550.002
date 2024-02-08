@@ -1,5 +1,5 @@
 from flask import Flask, request, abort
-from tokenmanager import TokenManager
+from jwks_server.tokenmanager import TokenManager
 import sys
 from os.path import basename
 
