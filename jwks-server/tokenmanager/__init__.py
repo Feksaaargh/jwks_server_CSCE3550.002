@@ -1,5 +1,3 @@
-from utils import intToB64
-from base64 import urlsafe_b64encode
 from uuid import uuid4
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
@@ -7,7 +5,7 @@ from time import time
 from jose import jwt
 
 # I decided to do this rather than inherit so it pretends it's a simpler object which better suits my needs
-class ExpirableRSAKey:
+class _ExpirableRSAKey:
     """
     Effectively just a Crypto.PublickKey.RSA.RsaKey object, but has a different constructor
     and an 'expired' parameter.
@@ -37,8 +35,18 @@ class TokenManager:
     Note that keys are stored in memory and are lost when the object is destroyed.
     """
     def __init__(self):
-        self._tokens: dict[str, ExpirableRSAKey] = {}
-        self._signature: bytes = get_random_bytes(32)  # 256 bit
+        self._tokens: dict[str, _ExpirableRSAKey] = {}
+
+    @staticmethod
+    def _intToB64(num: int, padEven: bool = True) -> str:
+        """Encodes an integer into base64. Expects input to be positive."""
+        if num < 0: return ""
+        ret = ""
+        while num > 0:
+            ret = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"[num%64] + ret
+            num = num // 64
+        if padEven and len(ret)%2: return "A"+ret
+        return ret
 
     def getJWKS(self) -> str:
         """
@@ -65,7 +73,7 @@ class TokenManager:
             # since expired tokens are only cleaned upon attempted retrieval, this could get bloated...
             del self._tokens[kid]
             return None
-        return f'{{"kty":"RSA","kid":"{kid}","n":"{intToB64(key.n)}","e":"{intToB64(key.e)}"}}'
+        return f'{{"kty":"RSA","kid":"{kid}","n":"{self._intToB64(key.n)}","e":"{self._intToB64(key.e)}"}}'
 
     def makeJWT(self, timeout: float) -> str:
         """
@@ -76,7 +84,7 @@ class TokenManager:
         :return: a signed JWT
         """
         # https://datatracker.ietf.org/doc/rfc7519/
-        key = ExpirableRSAKey(int(time()+timeout))  # flooring to be nice, despite the key expiration allowing decimals
+        key = _ExpirableRSAKey(int(time() + timeout))  # flooring to be nice, despite the key expiration allowing decimals
         kid = str(uuid4())
         while kid in self._tokens:
             kid = str(uuid4())
