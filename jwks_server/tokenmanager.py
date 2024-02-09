@@ -1,7 +1,6 @@
 from uuid import uuid4
-from Crypto.PublicKey import RSA
-from Crypto.Random import get_random_bytes
 from time import time
+from Crypto.PublicKey import RSA
 from jose import jwt
 
 # I decided to do this rather than inherit so it pretends it's a simpler object which better suits my needs
@@ -43,7 +42,7 @@ class TokenManager:
         if num < 0: return ""
         ret = ""
         while num > 0:
-            ret = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"[num%64] + ret
+            ret = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'[num%64] + ret
             num = num // 64
         if padEven and len(ret)%2: return "A"+ret
         return ret
@@ -73,7 +72,7 @@ class TokenManager:
             # since expired tokens are only cleaned upon attempted retrieval, this could get bloated...
             del self._tokens[kid]
             return None
-        return f'{{"kty":"RSA","kid":"{kid}","n":"{self._intToB64(key.n)}","e":"{self._intToB64(key.e)}"}}'
+        return f'{{"kty":"RSA","alg":"RS256","kid":"{kid}","n":"{self._intToB64(key.n)}","e":"{self._intToB64(key.e)}"}}'
 
     def makeJWT(self, timeout: float) -> str:
         """
