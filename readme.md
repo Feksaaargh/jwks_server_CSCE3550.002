@@ -23,6 +23,6 @@ If all tests succeed, it will print "OK" at the end. If they do not succeed, I w
 You may define further parameters alongside `--test` which get passed to unittest. You can find the whole list of options [here](https://docs.python.org/3/library/unittest.html#command-line-options), although they don't seem very useful.
 
 ## Images
-[Software running against provided test suite](https://raw.githubusercontent.com/Feksaaargh/jwks_server_CSCE3550.002/main/images/provided_test_suite.png "Running against the provided test suite")
+[Software running against provided test suite](images/provided_test_suite.png "Running against the provided test suite")
 
-[Software running its own test suite](https://raw.githubusercontent.com/Feksaaargh/jwks_server_CSCE3550.002/main/images/own_test_suite.png "Running its built in test suite")
+[Software running its own test suite](images/own_test_suite.png "Running its built in test suite")
