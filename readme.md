@@ -3,18 +3,18 @@
 The title says it all. It does JWKS things. And a little bit of JWT to spice it up. But you're probably interested in the JWKS part. That's why I called it a JWKS server and not a JWT server.
 
 ## Usage
-First you need to install requirements with `pip install -r requirements.txt`. It is recommended to do this in a virtual environment. After this, you can run the server with `python3 main.py`. This starts the server on port 8080 with two endpoints: `/auth` and `/.well-known/jwks.json`.
+First you need to install requirements with `pip install -r requirements.txt`. It is recommended to do this in a virtual environment. After this, you can run the server with `python3 main.py` from inside the `jwks_server` folder. This starts the server on port 8080 with two endpoints: `/auth` and `/.well-known/jwks.json`. To stop, hit CTRL+C in the terminal or otherwise kill the process. That's apparently how to stop a Flask server.
 
-`/auth` is where you create new keys. If you send a POST request to it, it will create a JWK on the server and return a signed JWT. The JWT contains a key identifier `kid` in its header and an expiration `exp` in its body, both to describe the JWK. The JWT is signed with the JWK that the `kid` is referring to, obtainable from `/.well-known/jwks.json`. Keys expire one hour after creation. You may set the `expired` query parameter (set to "true") when submitting the POST request to indicate you wish to create an already expired JWT. This will create a JWK that has expired one hour in the past.
+`/auth` is where you create new keys. If you send a POST request to it, it will create a JWK on the server and return a signed JWT. The JWT contains a key identifier `kid` in its header and an expiration `exp` in its body, both to describe the created JWK. The JWT is signed with the JWK that the `kid` is referring to, obtainable from `/.well-known/jwks.json`. Keys expire one hour after creation. You may set the `expired` query parameter (set to "true") when submitting the POST request to indicate you wish to create an already expired JWT. This will create a JWK that has expired one hour in the past.
 
-`/.well-known/jwks.json` is where you retrieve public keys. If you send a GET request to it, a JWKS will be returned containing all keys on the server. If you instead GET to `/.well-known/<kid>.json` (`<kid>` being the key identifier obtained from `/auth`) then a JWKS only containing the requested key will be returned. If the key is not found, a 404 status code will be returned.
+`/.well-known/jwks.json` is where you retrieve public keys. If you send a GET request to it, a JWKS will be returned containing all keys on the server. If you instead GET to `/.well-known/<kid>.json` (`<kid>` being the key identifier obtained from `/auth`) then a JWKS only containing the requested key will be returned. If the key is not found (or is expired), a 404 status code will be returned.
 
 There is no mechanism for retrieving private keys, as the assignment either did not make it clear that it was a requirement or it was simply not necessary.
 
 All keys are stored in memory and as such, restarting the server loses all of them. This project is not suitable for any sort of production use, and is even questionably suitable for submission as an assignment.
 
 ## Testing
-Run main.py with the `--test` flag to run a self test.
+Run `python3 main.py --test` to run a self test.
 
 During testing it opens another endpoint at `/dev` where you may pass in a query parameter `action` indicating the action you wish to take (the only choice is "resetkeys" which deletes and recreates the internal key store).
 
