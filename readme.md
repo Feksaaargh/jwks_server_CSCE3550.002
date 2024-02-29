@@ -9,7 +9,7 @@ First you need to install requirements with `pip install -r requirements.txt`. I
 
 `/auth` is where you create new keys. If you send a POST request to it, it will create a JWK on the server and return a signed JWT. The JWT contains a key identifier `kid` in its header and an expiration `exp` in its body, both to describe the created JWK. The JWT is signed with the JWK that the `kid` is referring to, obtainable from `/.well-known/jwks.json`. Keys expire one hour after creation. You may set the `expired` query parameter (set to "true") when submitting the POST request to indicate you wish to create an already expired JWT. This will create a JWK that has expired one hour in the past.
 
-`/.well-known/jwks.json` is where you retrieve public keys. If you send a GET request to it, a JWKS will be returned containing all keys on the server. If you instead GET to `/.well-known/<kid>.json` (`<kid>` being the key identifier obtained from `/auth`) then a JWKS only containing the requested key will be returned. If the key is not found (or is expired), a 404 status code will be returned.
+`/.well-known/jwks.json` is where you retrieve public keys. If you send a GET request to it, a JWKS will be returned containing all keys on the server. If you include a query parameter 'kid' like so: `/.well-known/jwks.json?kid=96240`, then a JWKS only containing the requested key will be returned. If the key is not found (or is expired), a 404 status code will be returned.
 
 There is no mechanism for retrieving private keys, as the assignment either did not make it clear that it was a requirement or it was simply not necessary.
 
