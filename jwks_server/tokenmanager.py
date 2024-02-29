@@ -1,5 +1,5 @@
-from uuid import uuid4
 from time import time
+from random import randint
 from Crypto.PublicKey import RSA
 from jose import jwt
 import sqlite3
@@ -31,7 +31,7 @@ class _ExpirableRSAKey:
 class _KeyDatabaseManager:
     """
     A class for abstracting away the complexities of managing a database.
-    Interfaces pretty much like a dictionary, but the keys are always strings
+    Interfaces pretty much like a dictionary, but the keys are always ints
     and the values are always ExpirableRSAKeys.
     """
     def __init__(self, datafile: str):
@@ -48,40 +48,40 @@ class _KeyDatabaseManager:
             print("\033[1;93mAn error occurred when accessing the sqlite database -\033[0m", e)
             print("\033[1;93mUsing fallback mode, keys will not be saved to disk.\033[0m")
             self._fallback = True
-            self._fbdb: dict[str, _ExpirableRSAKey] = {}  # fallback database
+            self._fbdb: dict[int, _ExpirableRSAKey] = {}  # fallback database
 
     def __del__(self):
         """Clean up, clean up, everybody do your share"""
         if not self._fallback: self._db.close()
 
-    def __getitem__(self, key: str) -> _ExpirableRSAKey:
+    def __getitem__(self, key: int) -> _ExpirableRSAKey:
         """Subscript get a key from the database"""
         if self._fallback:
             return self._fbdb[key] if key in self._fbdb else None
         # TODO implement database
 
-    def __setitem__(self, key: str, value: _ExpirableRSAKey):
+    def __setitem__(self, key: int, value: _ExpirableRSAKey):
         """Subscript set a key to the database"""
         if self._fallback:
             self._fbdb[key] = value
             return
         # TODO implement database
 
-    def __delitem__(self, key: str):
+    def __delitem__(self, key: int):
         """Delete a key in the database"""
         if self._fallback:
             if key in self._fbdb: del self._fbdb[key]
             return
         # TODO: implement database
 
-    def __contains__(self, key: str):
+    def __contains__(self, key: int):
         """Check if item is in database (with 'in' operator)"""
         if self._fallback:
             return key in self._fbdb
         # TODO: implement database
 
 
-    def listKIDs(self) -> list[str]:
+    def listKIDs(self) -> list[int]:
         if self._fallback:
             return list(self._fbdb.keys())
         # TODO: implement database
@@ -117,7 +117,7 @@ class TokenManager:
             if jwk is not None: all_jwk.append(jwk)
         return '{"keys":[%s]}'%",".join(all_jwk)
 
-    def getJWK(self, kid: str) -> str | None:
+    def getJWK(self, kid: int) -> str | None:
         """
         Retrieve and formats a single JWK from the known items.
 
@@ -143,9 +143,9 @@ class TokenManager:
         """
         # https://datatracker.ietf.org/doc/rfc7519/
         key = _ExpirableRSAKey(int(time() + timeout))  # flooring to be nice, despite the key expiration allowing decimals
-        kid = str(uuid4())
+        kid = randint(42, 2**31-1)  # up to signed 32 bit int limit
         while kid in self._database:
-            kid = str(uuid4())
+            kid = kid = randint(42, 2**31-1)
         self._database[kid] = key
         return jwt.encode({"iss": "feksa", "exp": str(int(key.expiration))}, key.private,
                           algorithm="RS256", headers={"kid": kid})

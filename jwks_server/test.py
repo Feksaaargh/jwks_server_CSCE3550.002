@@ -68,7 +68,7 @@ class TestServer(unittest.TestCase):
         tmp_jwk = parsed_jwks["keys"][0]
 
         # confirm they match each other
-        self.assertEqual(parsed_jwt[0]["kid"], tmp_jwk["kid"], "JWT and JWK did not have matching kids")
+        self.assertEqual(str(parsed_jwt[0]["kid"]), tmp_jwk["kid"], "JWT and JWK did not have matching kids")
         self.assertIsNotNone(safeLoadJWT(tmp_jwt, tmp_jwk), "Signature in JWK did not match signature on JWT")
 
 
