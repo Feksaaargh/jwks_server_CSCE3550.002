@@ -84,10 +84,7 @@ class _KeyDatabaseManager:
             self._fbdb[key] = value
             return
         with self._lock:
-            self._cur.execute(f"""
-                INSERT INTO keys (kid, key, exp)
-                VALUES ('{key}', '{value.private}', '{value.expiration}')
-            """)
+            self._cur.execute(f"INSERT INTO keys (kid, key, exp) VALUES (?, ?, ?)", (key, value.private, value.expiration))
             self._db.commit()
 
     def __delitem__(self, key: int):
@@ -178,7 +175,7 @@ class TokenManager:
             kid = randint(42, 2**31-1)
         self._database[kid] = key
         return jwt.encode({"iss": "feksa", "exp": str(int(key.expiration))}, key.private,
-                          algorithm="RS256", headers={"kid": kid})
+                          algorithm="RS256", headers={"kid": str(kid)})
 
     def recreateDB(self):
         remove_dbfile = not self._database.fallback
