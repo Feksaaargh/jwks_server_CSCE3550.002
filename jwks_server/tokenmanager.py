@@ -1,7 +1,9 @@
 from time import time
 from random import randint
+import os
 from Crypto.PublicKey import RSA
 from jose import jwt
+from threading import Lock
 import sqlite3
 
 # I decided to do this rather than inherit so it pretends it's a simpler object which better suits my needs
@@ -10,14 +12,15 @@ class _ExpirableRSAKey:
     Effectively just a Crypto.PublicKey.RSA.RsaKey object, but has a different constructor
     and an 'expired' parameter.
     """
-    def __init__(self, expiration: float, length: int = 3072):
+    def __init__(self, expiration: float, param: int | str = 3072):
         """
         :param expiration: A float representing seconds since epoch when this token should expire
-        :param length: How many bits the RSA key should be (default: 3072)
+        :param param: If it's an int, how many bits the RSA key should be (default: 3072).
+        Else, it's a string with a PEM key to import.
         """
-        self._key: RSA.RsaKey = RSA.generate(length)
+        self._key: RSA.RsaKey = RSA.generate(param) if isinstance(param, int) else RSA.import_key(param.encode())
         self.expiration: float = expiration
-        self.private: str = self._key.export_key().decode('utf-8')  # for convenience
+        self.private: str = self._key.export_key("PEM").decode('utf-8')  # for convenience
 
     @property
     def expired(self) -> bool:
@@ -39,52 +42,78 @@ class _KeyDatabaseManager:
         :param datafile: Absolute path to where the database file should be located.
         """
         # indicates if the database was successfully loaded
-        self._fallback: bool = False
+        self.fallback: bool = False
+        self._lock = Lock()  # I'm probably overusing the lock but better safe than sorry
         try:
-            raise sqlite3.Error("not yet implemented...")  # TODO: remove this and implement database
-            self._db: sqlite3.Connection = sqlite3.connect(datafile)
+            with self._lock:
+                self._db: sqlite3.Connection = sqlite3.connect(datafile, check_same_thread=False)
+                self._cur = self._db.cursor()
+                self._cur.execute("""
+                    CREATE TABLE IF NOT EXISTS keys(
+                        kid INTEGER PRIMARY KEY AUTOINCREMENT,
+                        key BLOB NOT NULL,
+                        exp INTEGER NOT NULL
+                    )
+                """)
         except sqlite3.Error as e:
             # print the error messages in bold bright yellow
             print("\033[1;93mAn error occurred when accessing the sqlite database -\033[0m", e)
             print("\033[1;93mUsing fallback mode, keys will not be saved to disk.\033[0m")
-            self._fallback = True
+            self.fallback = True
             self._fbdb: dict[int, _ExpirableRSAKey] = {}  # fallback database
 
     def __del__(self):
         """Clean up, clean up, everybody do your share"""
-        if not self._fallback: self._db.close()
+        if not self.fallback:
+            with self._lock:
+                self._db.close()
 
     def __getitem__(self, key: int) -> _ExpirableRSAKey:
         """Subscript get a key from the database"""
-        if self._fallback:
+        if self.fallback:
             return self._fbdb[key] if key in self._fbdb else None
-        # TODO implement database
+        with self._lock:
+            result = self._cur.execute(f"SELECT * FROM keys where kid={key}").fetchall()
+        if not result: raise KeyError
+        _, private, expiration = result[0]
+        return _ExpirableRSAKey(expiration, private)
 
     def __setitem__(self, key: int, value: _ExpirableRSAKey):
         """Subscript set a key to the database"""
-        if self._fallback:
+        if self.fallback:
             self._fbdb[key] = value
             return
-        # TODO implement database
+        with self._lock:
+            self._cur.execute(f"""
+                INSERT INTO keys (kid, key, exp)
+                VALUES ('{key}', '{value.private}', '{value.expiration}')
+            """)
+            self._db.commit()
 
     def __delitem__(self, key: int):
         """Delete a key in the database"""
-        if self._fallback:
+        if self.fallback:
             if key in self._fbdb: del self._fbdb[key]
             return
-        # TODO: implement database
+        with self._lock:
+            self._cur.execute(f"DELETE FROM keys WHERE kid={key}")
+            self._db.commit()
 
     def __contains__(self, key: int):
         """Check if item is in database (with 'in' operator)"""
-        if self._fallback:
+        if self.fallback:
             return key in self._fbdb
-        # TODO: implement database
+        with self._lock:
+            return len(self._cur.execute(f"SELECT * FROM keys where kid = {key}").fetchall()) != 0
 
 
     def listKIDs(self) -> list[int]:
-        if self._fallback:
+        if self.fallback:
             return list(self._fbdb.keys())
-        # TODO: implement database
+        with self._lock:
+            return [i[0] for i in self._cur.execute("SELECT kid FROM keys").fetchall()]
+
+
 
 
 class TokenManager:
@@ -92,8 +121,9 @@ class TokenManager:
     A class to create, store, and retrieve JWTs and JWKs.
     Note that keys are stored in memory and are lost when the object is destroyed.
     """
-    def __init__(self):
-        self._database = _KeyDatabaseManager(None)
+    def __init__(self, dbpath: str):
+        self._database = _KeyDatabaseManager(dbpath)
+        self._dblocation = dbpath
 
     @staticmethod
     def _intToB64(num: int, padEven: bool = True) -> str:
@@ -145,7 +175,13 @@ class TokenManager:
         key = _ExpirableRSAKey(int(time() + timeout))  # flooring to be nice, despite the key expiration allowing decimals
         kid = randint(42, 2**31-1)  # up to signed 32 bit int limit
         while kid in self._database:
-            kid = kid = randint(42, 2**31-1)
+            kid = randint(42, 2**31-1)
         self._database[kid] = key
         return jwt.encode({"iss": "feksa", "exp": str(int(key.expiration))}, key.private,
                           algorithm="RS256", headers={"kid": kid})
+
+    def recreateDB(self):
+        remove_dbfile = not self._database.fallback
+        del self._database
+        if remove_dbfile: os.remove(self._dblocation)
+        self._database = _KeyDatabaseManager(self._dblocation)
