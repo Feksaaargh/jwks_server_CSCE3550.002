@@ -83,7 +83,7 @@ class TestServer(unittest.TestCase):
 
         # get the JWKS
         kid = tmp_jwt[0]["kid"]
-        req = requests.get(f"http://localhost:8080/.well-known/{kid}.json")
+        req = requests.get(f"http://localhost:8080/.well-known/jwks.json?jwk={kid}")
         self.assertEqual(req.status_code, 404, "Incorrect status code received for accessing expired JWK")
         req = requests.get(f"http://localhost:8080/.well-known/jwks.json")
         self.assertEqual(req.status_code, 200, "Incorrect status code received")

@@ -13,24 +13,22 @@ tkm_rlock = RLock()
 testing = False
 
 
-@app.route("/.well-known/<kid>", methods=["GET"])
-def getJWKS(kid) -> tuple[str, int]:
+@app.route("/.well-known/jwks.json", methods=["GET"])
+def getJWKS() -> tuple[str, int]:
     """
-    <kid> needs to end with ".json" for this function to respond to it.
-    If kid is "jwks.json", returns all JWKs known to the system.
-    If kid is anything else (+.json), attempts to return that specific JWK (in a JWKS).
+    Get all the JWKs or a specific JWK if the "jwk" query parameter is specified
     """
-    # note that since the generated kids are RFC4122 UUIDs, it can never be "jwks"
-    #  and therefore collisions aren't a problem
-    if not kid.endswith(".json"): abort(404)
-    kid = kid[:-5]
     with tkm_rlock:  # thread safety for when testing
-        if kid == "jwks":
-            return tkm.getJWKS(), 200
-        else:
+        if kid := request.args.get("jwk"):
+            # has jwk parameter
+            try: kid = int(kid)
+            except ValueError: abort(404)
             jwk = tkm.getJWK(kid)
             if jwk is None: abort(404)
             return f'{{"keys":[{jwk}]}}', 200
+        else:
+            # does not have jwk parameter
+            return tkm.getJWKS(), 200
 
 
 @app.route("/auth", methods=["POST"])
