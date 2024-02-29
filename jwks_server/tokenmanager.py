@@ -2,11 +2,12 @@ from uuid import uuid4
 from time import time
 from Crypto.PublicKey import RSA
 from jose import jwt
+import sqlite3
 
 # I decided to do this rather than inherit so it pretends it's a simpler object which better suits my needs
 class _ExpirableRSAKey:
     """
-    Effectively just a Crypto.PublickKey.RSA.RsaKey object, but has a different constructor
+    Effectively just a Crypto.PublicKey.RSA.RsaKey object, but has a different constructor
     and an 'expired' parameter.
     """
     def __init__(self, expiration: float, length: int = 3072):
@@ -27,6 +28,64 @@ class _ExpirableRSAKey:
         """Silly proxying function to pretend this is just an extension of the Rsakey object"""
         return self._key.__getattribute__(item)
 
+class _KeyDatabaseManager:
+    """
+    A class for abstracting away the complexities of managing a database.
+    Interfaces pretty much like a dictionary, but the keys are always strings
+    and the values are always ExpirableRSAKeys.
+    """
+    def __init__(self, datafile: str):
+        """
+        :param datafile: Absolute path to where the database file should be located.
+        """
+        # indicates if the database was successfully loaded
+        self._fallback: bool = False
+        try:
+            raise sqlite3.Error("not yet implemented...")  # TODO: remove this and implement database
+            self._db: sqlite3.Connection = sqlite3.connect(datafile)
+        except sqlite3.Error as e:
+            # print the error messages in bold bright yellow
+            print("\033[1;93mAn error occurred when accessing the sqlite database -\033[0m", e)
+            print("\033[1;93mUsing fallback mode, keys will not be saved to disk.\033[0m")
+            self._fallback = True
+            self._fbdb: dict[str, _ExpirableRSAKey] = {}  # fallback database
+
+    def __del__(self):
+        """Clean up, clean up, everybody do your share"""
+        if not self._fallback: self._db.close()
+
+    def __getitem__(self, key: str) -> _ExpirableRSAKey:
+        """Subscript get a key from the database"""
+        if self._fallback:
+            return self._fbdb[key] if key in self._fbdb else None
+        # TODO implement database
+
+    def __setitem__(self, key: str, value: _ExpirableRSAKey):
+        """Subscript set a key to the database"""
+        if self._fallback:
+            self._fbdb[key] = value
+            return
+        # TODO implement database
+
+    def __delitem__(self, key: str):
+        """Delete a key in the database"""
+        if self._fallback:
+            if key in self._fbdb: del self._fbdb[key]
+            return
+        # TODO: implement database
+
+    def __contains__(self, key: str):
+        """Check if item is in database (with 'in' operator)"""
+        if self._fallback:
+            return key in self._fbdb
+        # TODO: implement database
+
+
+    def listKIDs(self) -> list[str]:
+        if self._fallback:
+            return list(self._fbdb.keys())
+        # TODO: implement database
+
 
 class TokenManager:
     """
@@ -34,7 +93,7 @@ class TokenManager:
     Note that keys are stored in memory and are lost when the object is destroyed.
     """
     def __init__(self):
-        self._tokens: dict[str, _ExpirableRSAKey] = {}
+        self._database = _KeyDatabaseManager(None)
 
     @staticmethod
     def _intToB64(num: int, padEven: bool = True) -> str:
@@ -53,7 +112,7 @@ class TokenManager:
         """
         # https://datatracker.ietf.org/doc/rfc7517/
         all_jwk = []
-        for i in list(self._tokens.keys()):  # need to listify because getJWK could remove a key
+        for i in self._database.listKIDs():  # since it's pretty much a dict, no need to specially handle item removal
             jwk = self.getJWK(i)
             if jwk is not None: all_jwk.append(jwk)
         return '{"keys":[%s]}'%",".join(all_jwk)
@@ -66,11 +125,11 @@ class TokenManager:
         :return: a string encoding the requested JWK, or None if not found or expired.
         """
         # https://datatracker.ietf.org/doc/rfc7517/
-        if kid not in self._tokens: return None
-        key = self._tokens[kid]
+        key = self._database[kid]
+        if key is None: return None
         if key.expired:
             # since expired tokens are only cleaned upon attempted retrieval, this could get bloated...
-            del self._tokens[kid]
+            del self._database[kid]
             return None
         return f'{{"kty":"RSA","alg":"RS256","kid":"{kid}","n":"{self._intToB64(key.n)}","e":"{self._intToB64(key.e)}"}}'
 
@@ -85,8 +144,8 @@ class TokenManager:
         # https://datatracker.ietf.org/doc/rfc7519/
         key = _ExpirableRSAKey(int(time() + timeout))  # flooring to be nice, despite the key expiration allowing decimals
         kid = str(uuid4())
-        while kid in self._tokens:
+        while kid in self._database:
             kid = str(uuid4())
-        self._tokens[kid] = key
+        self._database[kid] = key
         return jwt.encode({"iss": "feksa", "exp": str(int(key.expiration))}, key.private,
                           algorithm="RS256", headers={"kid": kid})
