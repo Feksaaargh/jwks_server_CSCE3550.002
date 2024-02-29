@@ -155,7 +155,7 @@ def safeLoadJWT(in_jwt: str, in_jwk: dict = None) -> tuple[dict, dict] | None:
     :return: (header, payload) of the JWT if everything succeeds, None otherwise (including if signature is bad)
     """
     split_jwt = in_jwt.split('.')
-    split_jwt = [i+"="*((3-len(i)%3)%3) for i in split_jwt]  # base64 module hates no padding at the end.
+    split_jwt = [i+"="*((4-len(i)%4)%4) for i in split_jwt]  # base64 module hates no padding at the end.
     if len(split_jwt) != 3: return None
     header = safeLoadJson(urlsafe_b64decode(split_jwt[0]))
     if header is None: return None
