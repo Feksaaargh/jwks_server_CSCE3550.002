@@ -11,18 +11,24 @@ First you need to install requirements with `pip install -r requirements.txt`. I
 
 `/.well-known/jwks.json` is where you retrieve public keys. If you send a GET request to it, a JWKS will be returned containing all keys on the server. If you include a query parameter 'kid' like so: `/.well-known/jwks.json?kid=96240`, then a JWKS only containing the requested key will be returned. If the key is not found (or is expired), a 404 status code will be returned.
 
-There is no mechanism for retrieving private keys, as the assignment either did not make it clear that it was a requirement or it was simply not necessary.
-
-All keys are stored in memory and as such, restarting the server loses all of them. This project is not suitable for any sort of production use, and is even questionably suitable for submission as an assignment.
+An sqlite database will be created at "totally_not_my_privateKeys.db" next to `main.py`. This contains the program's keys in a table called "keys" with columns `kid` (int), `key` (blob (text)), and `exp` (int). They are the kid, PEM format private key, and expiration date respectively.
+If creation of this database fails, the program will fall back to using an in-memory database which will be lost upon program exit.
 
 ## Testing
 Run `python3 main.py --test` to run a self test.
 
-During testing it opens another endpoint at `/dev` where you may pass in a query parameter `action` indicating the action you wish to take (the only choice is "resetkeys" which deletes and recreates the internal key store).
+**DO NOT run a self-test with anything important named "totally_not_my_privateKeys.db" in the same folder as the script; it may get deleted.**
+
+During testing it opens another endpoint at `/dev` where you may pass in a query parameter `action` indicating the action you wish to take (the only choice is "resetkeys" which deletes and recreates the key database).
 
 If all tests succeed, it will print "OK" at the end. If they do not succeed, I will probably cry.
 
 You may define further parameters alongside `--test` which get passed to unittest. You can find the whole list of options [here](https://docs.python.org/3/library/unittest.html#command-line-options), although they don't seem very useful.
+
+## Other parameters
+You may start the program with `python3 main.py --recreate_db` which will attempt to delete and recreate the database during launch.
+
+**DO NOT use this parameter with anything important named "totally_not_my_privateKeys.db" in the same folder as the script; it may get deleted.**
 
 ## Images
 ![Software running against provided test suite](images/provided_test_suite.png "Running against the provided test suite")
