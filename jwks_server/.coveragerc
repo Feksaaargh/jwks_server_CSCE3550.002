@@ -3,3 +3,6 @@ command_line = main.py --test
 concurrency = 
     multiprocessing
     thread
+
+[report]
+omit = main.py
