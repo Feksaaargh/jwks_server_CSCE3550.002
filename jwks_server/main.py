@@ -40,13 +40,16 @@ def createJWT() -> str:
 
 
 @app.route("/dev", methods=["POST"])
-def testingInterface():
+def testingInterface() -> str:
     """An endpoint allowing for resetting keys on the server"""
     if not testing: abort(404)  # don't allow access during normal use
     global tkm
     action = request.args.get("action")
     if action == "resetkeys":
         tkm.recreateDB()
+        return "Ack"
+    elif action == "resetkeysFALLBACK":
+        tkm.recreateDB(force_fallback=True)
         return "Ack"
     return "Not found"
 

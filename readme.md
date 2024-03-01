@@ -12,14 +12,14 @@ First you need to install requirements with `pip install -r requirements.txt`. I
 `/.well-known/jwks.json` is where you retrieve public keys. If you send a GET request to it, a JWKS will be returned containing all keys on the server. If you include a query parameter 'kid' like so: `/.well-known/jwks.json?kid=96240`, then a JWKS only containing the requested key will be returned. If the key is not found (or is expired), a 404 status code will be returned.
 
 An sqlite database will be created at "totally_not_my_privateKeys.db" next to `main.py`. This contains the program's keys in a table called "keys" with columns `kid` (int), `key` (blob (text)), and `exp` (int). They are the kid, PEM format private key, and expiration date respectively.
-If creation of this database fails, the program will fall back to using an in-memory database which will be lost upon program exit.
+If creation of this database fails, the program will enter a fallback mode where it uses an in-memory database which will be lost upon program exit.
 
 ## Testing
 Run `python3 main.py --test` to run a self test.
 
 **DO NOT run a self-test with anything important named "totally_not_my_privateKeys.db" in the same folder as the script; it may get deleted.**
 
-During testing it opens another endpoint at `/dev` where you may pass in a query parameter `action` indicating the action you wish to take (the only choice is "resetkeys" which deletes and recreates the key database).
+During testing it opens another endpoint at `/dev` where you may pass in a query parameter `action` indicating the action you wish to take. The action "resetkeys" deletes and recreates the key database, and "resetkeysFALLBACK" deletes and recreates the key database but forces the fallback mode when recreating it.
 
 If all tests succeed, it will print "OK" at the end. If they do not succeed, I will probably cry.
 

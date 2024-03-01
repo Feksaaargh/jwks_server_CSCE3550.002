@@ -37,41 +37,39 @@ class _KeyDatabaseManager:
     Interfaces pretty much like a dictionary, but the keys are always ints
     and the values are always ExpirableRSAKeys.
     """
-    def __init__(self, datafile: str):
+    def __init__(self, datafile: str, force_fallback: bool = False):
         """
         :param datafile: Absolute path to where the database file should be located.
         """
         # indicates if the database was successfully loaded
         self.fallback: bool = False
         self._lock = Lock()  # I'm probably overusing the lock but better safe than sorry
-        try:
-            with self._lock:
+        with self._lock:
+            try:
+                if force_fallback: raise sqlite3.Error("Forcing fallback mode")
                 self._db: sqlite3.Connection = sqlite3.connect(datafile, check_same_thread=False)
-                self._cur = self._db.cursor()
-                self._cur.execute("""
-                    CREATE TABLE IF NOT EXISTS keys(
-                        kid INTEGER PRIMARY KEY AUTOINCREMENT,
-                        key BLOB NOT NULL,
-                        exp INTEGER NOT NULL
-                    )
-                """)
-        except sqlite3.Error as e:
-            # print the error messages in bold bright yellow
-            print("\033[1;93mAn error occurred when accessing the sqlite database -\033[0m", e)
-            print("\033[1;93mUsing fallback mode, keys will not be saved to disk.\033[0m")
-            self.fallback = True
-            self._fbdb: dict[int, _ExpirableRSAKey] = {}  # fallback database
+            except sqlite3.Error as e:
+                # print the error messages in bold bright yellow
+                print("\033[1;93mAn error occurred when accessing the sqlite database -\033[0m", e)
+                print("\033[1;93mUsing fallback mode, keys will not be saved to disk.\033[0m")
+                self.fallback = True
+                self._db: sqlite3.Connection = sqlite3.connect(":memory:", check_same_thread=False)
+            self._cur = self._db.cursor()
+            self._cur.execute("""
+                CREATE TABLE IF NOT EXISTS keys(
+                    kid INTEGER PRIMARY KEY AUTOINCREMENT,
+                    key BLOB NOT NULL,
+                    exp INTEGER NOT NULL
+                )
+            """)
 
     def __del__(self):
         """Clean up, clean up, everybody do your share"""
-        if not self.fallback:
-            with self._lock:
-                self._db.close()
+        with self._lock:
+            self._db.close()
 
     def __getitem__(self, key: int) -> _ExpirableRSAKey:
         """Subscript get a key from the database"""
-        if self.fallback:
-            return self._fbdb[key] if key in self._fbdb else None
         with self._lock:
             result = self._cur.execute(f"SELECT * FROM keys where kid={key}").fetchall()
         if not result: raise KeyError
@@ -80,33 +78,23 @@ class _KeyDatabaseManager:
 
     def __setitem__(self, key: int, value: _ExpirableRSAKey):
         """Subscript set a key to the database"""
-        if self.fallback:
-            self._fbdb[key] = value
-            return
         with self._lock:
             self._cur.execute(f"INSERT INTO keys (kid, key, exp) VALUES (?, ?, ?)", (key, value.private, value.expiration))
             self._db.commit()
 
     def __delitem__(self, key: int):
         """Delete a key in the database"""
-        if self.fallback:
-            if key in self._fbdb: del self._fbdb[key]
-            return
         with self._lock:
             self._cur.execute(f"DELETE FROM keys WHERE kid={key}")
             self._db.commit()
 
     def __contains__(self, key: int):
         """Check if item is in database (with 'in' operator)"""
-        if self.fallback:
-            return key in self._fbdb
         with self._lock:
             return len(self._cur.execute(f"SELECT * FROM keys where kid = {key}").fetchall()) != 0
 
 
     def listKIDs(self) -> list[int]:
-        if self.fallback:
-            return list(self._fbdb.keys())
         with self._lock:
             return [i[0] for i in self._cur.execute("SELECT kid FROM keys").fetchall()]
 
@@ -118,8 +106,8 @@ class TokenManager:
     A class to create, store, and retrieve JWTs and JWKs.
     Note that keys are stored in memory and are lost when the object is destroyed.
     """
-    def __init__(self, dbpath: str):
-        self._database = _KeyDatabaseManager(dbpath)
+    def __init__(self, dbpath: str, force_fallback: bool = False):
+        self._database = _KeyDatabaseManager(dbpath, force_fallback)
         self._dblocation = dbpath
 
     @staticmethod
@@ -180,8 +168,8 @@ class TokenManager:
         return jwt.encode({"iss": "feksa", "exp": str(int(key.expiration))}, key.private,
                           algorithm="RS256", headers={"kid": str(kid)})
 
-    def recreateDB(self):
+    def recreateDB(self, force_fallback: bool = False):
         remove_dbfile = not self._database.fallback
         del self._database
         if remove_dbfile: os.remove(self._dblocation)
-        self._database = _KeyDatabaseManager(self._dblocation)
+        self._database = _KeyDatabaseManager(self._dblocation, force_fallback)
