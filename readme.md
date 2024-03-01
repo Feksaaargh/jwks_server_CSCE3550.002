@@ -44,6 +44,6 @@ rm .coverage
 This will generate a `htmlconv` directory in `jwks_server`. This contains a webpage with the coverage data. Open `index.html` in a browser to view it.
 
 ## Images
-![Software running against provided test suite](images/provided_test_suite.png "Running against the provided test suite")
+![Software running against provided test suite](images/provided_test_suite.webp "Running against the provided test suite")
 
-![Software running its own test suite](images/own_test_suite.png "Running its built in test suite")
+![Software running its own test suite](images/own_test_suite.webp "Running its built in test suite")
