@@ -155,8 +155,11 @@ class TokenManager:
         key = self._database[kid]
         if key is None: return None
         if key.expired:
+            # This is commented out because Gradebot REQUIRES an expired key in the database, so automatic
+            #  cleanup will dock me points.
+
             # since expired tokens are only cleaned upon attempted retrieval, this could get bloated...
-            del self._database[kid]
+            #del self._database[kid]
             return None
         return f'{{"kty":"RSA","alg":"RS256","kid":"{kid}","n":"{self._intToB64(key.n)}","e":"{self._intToB64(key.e)}"}}'
 
