@@ -35,7 +35,7 @@ class TestServer(unittest.TestCase):
 
 
     def setUp(self):
-        """Reset all keys after each test is ran"""
+        """Reset all keys after each test is run"""
         # This endpoint is only active during testing, don't worry.
         requests.post("http://localhost:8080/dev?action=resetkeys")
 
@@ -111,6 +111,13 @@ class TestServer(unittest.TestCase):
             req = func("http://localhost:8080/just/testing.stuff")
             self.assertEqual(req.status_code, 404, "Unexpected status code for request to nonexistent endpoint")
 
+class FallbackTestServer(TestServer):
+    """
+    Literally just run all the tests in TestServer but with fallback mode enabled
+    """
+    def setUp(self):
+        """Reset all keys after each test is run"""
+        requests.post("http://localhost:8080/dev?action=resetkeysFALLBACK")
 
 def safeLoadJson(in_json: str | bytes) -> dict | None:
     """Loads the supplied JSON. Returns None if it is invalid."""

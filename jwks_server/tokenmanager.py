@@ -171,5 +171,7 @@ class TokenManager:
     def recreateDB(self, force_fallback: bool = False):
         remove_dbfile = not self._database.fallback
         del self._database
-        if remove_dbfile: os.remove(self._dblocation)
+        if remove_dbfile:
+            try: os.remove(self._dblocation)
+            except FileNotFoundError: pass
         self._database = _KeyDatabaseManager(self._dblocation, force_fallback)
