@@ -84,7 +84,7 @@ class TestServer(unittest.TestCase):
 
         # get the JWKS
         kid = tmp_jwt[0]["kid"]
-        req = requests.get(f"http://localhost:8080/.well-known/jwks.json?jwk={kid}")
+        req = requests.get(f"http://localhost:8080/.well-known/jwks.json?kid={kid}")
         self.assertEqual(req.status_code, 404, "Incorrect status code received for accessing expired JWK")
         req = requests.get(f"http://localhost:8080/.well-known/jwks.json")
         self.assertEqual(req.status_code, 200, "Incorrect status code received")
@@ -97,7 +97,7 @@ class TestServer(unittest.TestCase):
 
     def test_invalid_stuff(self):
         # test jwks endpoint
-        req = requests.get("http://localhost:8080/.well-known/not-a-kid.json")
+        req = requests.get("http://localhost:8080/.well-known/jwks.json?kid=0")
         self.assertEqual(req.status_code, 404, "Unexpected response code for invalid JWK kid")
         for func in (requests.post, requests.put, requests.delete):
             req = func("http://localhost:8080/.well-known/jwks.json")
@@ -146,6 +146,7 @@ def validateJWKS(in_jwks: dict) -> int | None:
 
     :param in_jwks: A dictionary containing a JWKS (just parse the JSON and pass it in)
     """
+    if in_jwks is None: return None
     if "keys" not in in_jwks or type(in_jwks["keys"]) is not list: return None
     good_jwk = 0
     for item in in_jwks["keys"]:

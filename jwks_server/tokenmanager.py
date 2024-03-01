@@ -140,8 +140,8 @@ class TokenManager:
         :return: a string encoding the requested JWK, or None if not found or expired.
         """
         # https://datatracker.ietf.org/doc/rfc7517/
+        if kid not in self._database: return None
         key = self._database[kid]
-        if key is None: return None
         if key.expired:
             # This is commented out because Gradebot REQUIRES an expired key in the database, so automatic
             #  cleanup will dock me points.

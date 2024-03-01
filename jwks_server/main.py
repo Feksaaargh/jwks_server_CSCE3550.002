@@ -18,7 +18,7 @@ def getJWKS() -> tuple[str, int]:
     Get all the JWKs or a specific JWK if the "jwk" query parameter is specified
     """
     with tkm_lock:  # thread safety for when testing
-        if kid := request.args.get("jwk"):
+        if kid := request.args.get("kid"):
             # has jwk parameter
             try: kid = int(kid)
             except ValueError: abort(404)
