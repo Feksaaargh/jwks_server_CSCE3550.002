@@ -1,0 +1,5 @@
+[run]
+command_line = main.py --test
+concurrency = 
+    multiprocessing
+    thread

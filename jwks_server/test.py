@@ -1,3 +1,4 @@
+import os, signal
 import requests
 import unittest
 import multiprocessing
@@ -30,7 +31,7 @@ class TestServer(unittest.TestCase):
         """Destroy server"""
         # I swear I tried looking around for a nicer way to do it. But I guess Flask is
         #  just built to work with unexpected termination.
-        cls.flask_server.terminate()
+        os.kill(cls.flask_server.pid, signal.SIGINT)
 
 
     def setUp(self):

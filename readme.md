@@ -30,6 +30,19 @@ You may start the program with `python3 main.py --recreate_db` which will attemp
 
 **DO NOT use this parameter with anything important named "totally_not_my_privateKeys.db" in the same folder as the script; it may get deleted.**
 
+## Coverage
+To check coverage, you must run the following commands with your venv active and your working directory inside `jwks_server`:
+```shell
+export COVERAGE_PROCESS_START=".coveragerc" PYTHONPATH=$PWD
+coverage run
+coverage combine
+coverage html
+rm .coverage
+```
+(Note that this is for Linux, please adapt for Windows as necessary.)
+
+This will generate a `htmlconv` directory in `jwks_server`. This contains a webpage with the coverage data. Open `index.html` in a browser to view it.
+
 ## Images
 ![Software running against provided test suite](images/provided_test_suite.png "Running against the provided test suite")
 
