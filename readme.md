@@ -2,7 +2,7 @@
 
 The title says it all. It does JWKS things. And a little bit of JWT to spice it up. But you're probably interested in the JWKS part. That's why I called it a JWKS server and not a JWT server.
 
-**Please see git tags for the different projects.**
+**This is for project 2, but is compatible with project 1. The original project 1 submission can be found in the tags, but does not have coverage so I would like this to be graded instead.**
 
 ## Usage
 First you need to install requirements with `pip install -r requirements.txt`. It is recommended to do this in a virtual environment. After this, you can run the server with `python3 main.py` from inside the `jwks_server` folder. This starts the server on port 8080 with two endpoints: `/auth` and `/.well-known/jwks.json`. To stop, hit CTRL+C in the terminal or otherwise kill the process. That's apparently how to stop a Flask server.
